@@ -27,6 +27,12 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
 
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
   const swaggerService = app.get(SwaggerService);
   swaggerService.setupSwagger(app);
 

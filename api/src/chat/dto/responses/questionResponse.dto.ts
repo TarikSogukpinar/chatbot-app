@@ -1,3 +1,3 @@
-export class QuestionResponseDto {
-    question: string;
-  }
+export type QuestionResponseDto = {
+  question: string;
+};

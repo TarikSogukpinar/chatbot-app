@@ -1,6 +1,4 @@
-import { Session } from 'src/models/sessions.schema';
-
-export class EndSessionResponseDto {
+export type EndSessionResponseDto = {
+  sessionId: string;
   message: string;
-  session: Session;
-}
+};

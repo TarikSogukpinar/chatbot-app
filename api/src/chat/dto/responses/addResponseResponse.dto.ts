@@ -1,7 +1,6 @@
-import { Session } from "src/models/sessions.schema";
+import { Session } from 'src/models/sessions.schema';
 
-
-export class AddResponseResponseDto {
+export type AddResponseResponseDto = {
   updatedSession: Session;
   nextQuestion: string;
-}
+};

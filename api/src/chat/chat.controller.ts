@@ -28,6 +28,7 @@ export class ChatController {
   @HttpCode(HttpStatus.OK)
   async startSession(@Body() startSessionDto: StartSessionDto) {
     const result = await this.chatService.startSession(startSessionDto);
+    
     return {
       sessionId: result._id as unknown,
       question: await this.chatService.getQuestion(0),

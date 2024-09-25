@@ -8,6 +8,8 @@ import { Model } from 'mongoose';
 import { Session, SessionDocument } from '../models/sessions.schema';
 import { Question, QuestionDocument } from '../models/question.schema';
 import { StartSessionDto } from './dto/requests/startSession.dto';
+import { AddResponseResponseDto } from './dto/responses/addResponseResponse.dto';
+import { EndSessionResponseDto } from './dto/responses/endSessionResponse.dto';
 @Injectable()
 export class ChatService implements OnModuleInit {
   constructor(
@@ -94,7 +96,7 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async getQuestion(index: number): Promise<string | null> {
+  async getQuestion(index: number): Promise<any> {
     try {
       console.log('Getting question for index:', index);
       const question = await this.questionModel.findOne({ order: index + 1 });
@@ -103,6 +105,7 @@ export class ChatService implements OnModuleInit {
         return question.text;
       }
       console.log('No more questions, chat ended');
+
       return null;
     } catch (error) {
       console.log(error);
@@ -112,7 +115,11 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async addResponse(sessionId: string, questionIndex: number, answer: string) {
+  async addResponse(
+    sessionId: string,
+    questionIndex: number,
+    answer: string,
+  ): Promise<AddResponseResponseDto> {
     try {
       // Input validation
       if (!sessionId || questionIndex === undefined || answer === undefined) {
@@ -127,9 +134,7 @@ export class ChatService implements OnModuleInit {
 
       // Check if the session has ended
       if (session.endedAt) {
-        return {
-          message: 'This session has ended, no more responses allowed.',
-        };
+        console.log('Session has ended, no more responses allowed');
       }
 
       // Convert questionIndex to a number and fetch the question
@@ -170,11 +175,14 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async endSession(sessionId: string): Promise<any> {
+  async endSession(sessionId: string): Promise<EndSessionResponseDto> {
     try {
       const session = await this.sessionModel.findById(sessionId);
       if (session.endedAt) {
-        return { message: 'This session is already ended.' };
+        return {
+          sessionId,
+          message: 'This session is already ended.',
+        };
       }
 
       const endedSession = await this.sessionModel.findByIdAndUpdate(
@@ -183,7 +191,10 @@ export class ChatService implements OnModuleInit {
         { new: true },
       );
 
-      return { message: 'Session ended successfully.', session: endedSession };
+      return {
+        sessionId,
+        message: 'Session ended successfully.',
+      };
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(

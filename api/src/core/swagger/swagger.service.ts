@@ -5,14 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 export class SwaggerService {
   setupSwagger(app: INestApplication) {
     const config = new DocumentBuilder()
-      .setTitle('E-commerce MonoRepo Boilerplate API v.1.0.0')
-      .setDescription('E-commerce MonoRepo Boilerplate API Documentation')
+      .setTitle('Chat Bot API v.1.0.0')
+      .setDescription('Chat Bot API Documentation')
       .setVersion('1.0')
-      .addBearerAuth(
-        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-        'access-token',
-      )
-      .addTag('E-commerce MonoRepo')
+      .addTag('Chat Bot API')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

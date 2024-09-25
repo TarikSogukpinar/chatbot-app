@@ -8,10 +8,12 @@ export default function ChatPage() {
   const [currentQuestion, setCurrentQuestion] = useState(""); // Şu anki soruyu tutar
   const [sessionId, setSessionId] = useState(null); // Session ID'sini tutar
   const [chatStarted, setChatStarted] = useState(false); // Chat'in başlayıp başlamadığını tutar
+  const [loading, setLoading] = useState(false); // Yüklenme durumunu kontrol eder
 
-  // Chat oturumunu başlatır
+  // Yeni chat oturumu başlat
   const startChat = async () => {
-    const response = await fetch("http://localhost:6060/api/chat/start", {
+    setLoading(true); // Spinner'ı başlat
+    const response = await fetch("http://localhost:6060/api/v1/chat/start", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -23,18 +25,20 @@ export default function ChatPage() {
     setCurrentQuestion(data.question); // İlk soruyu ayarla
     setMessages([{ text: data.question, from: "bot" }]); // Mesajları başlat
     setChatStarted(true); // Chat'in başladığını işaretle
+    setLoading(false); // Spinner'ı durdur
   };
 
   // Kullanıcıdan gelen cevap ve bir sonraki sorunun alınması
   const sendMessage = async () => {
     if (!inputValue.trim()) return;
+    setLoading(true); // Spinner'ı başlat
 
     const updatedMessages = [...messages, { text: inputValue, from: "user" }];
     setMessages(updatedMessages);
     setInputValue("");
 
     const response = await fetch(
-      `http://localhost:6060/api/chat/${sessionId}/question/${messages.length}`,
+      `http://localhost:6060/api/v1/chat/${sessionId}/question/${messages.length}`,
       {
         method: "POST",
         headers: {
@@ -45,6 +49,7 @@ export default function ChatPage() {
     );
 
     const data = await response.json();
+    setLoading(false); // Spinner'ı durdur
 
     if (data.nextQuestion) {
       setCurrentQuestion(data.nextQuestion);
@@ -57,18 +62,34 @@ export default function ChatPage() {
     }
   };
 
+  const endChat = async () => {
+    if (!sessionId) return;
+
+    setLoading(true);
+    const response = await fetch(
+      `http://localhost:6060/api/v1/chat/end/${sessionId}`,
+      {
+        method: "POST",
+      }
+    );
+    await response.json();
+    setMessages([{ text: "Chat ended", from: "bot" }]);
+    setChatStarted(false);
+    setSessionId(null);
+    setLoading(false);
+  };
+
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-600">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-gray-950 to-gray-950">
       <div className="w-full max-w-md p-6 bg-white shadow-xl rounded-lg">
-        {/* Eğer chat başlamadıysa başlangıç ekranını göster */}
         {!chatStarted ? (
-          <div className="flex flex-col items-center justify-center h-full">
+          <div className="flex flex-col items-center justify-center h-full rounded-md">
             <h2 className="text-xl font-bold text-gray-700 mb-4">
-              Welcome to the Chatbot!
+              Welcome to the Chatbot! 🤖
             </h2>
             <button
               onClick={startChat}
-              className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition"
+              className="bg-gray-950 text-white p-3 rounded-lg hover:bg-blue-700 transition"
             >
               Start Chat
             </button>
@@ -80,7 +101,7 @@ export default function ChatPage() {
               {messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-xl max-w-xs ${
+                  className={`p-3 rounded-xl max-w-xs animate-fade-in ${
                     message.from === "user"
                       ? "bg-blue-500 text-white self-end"
                       : "bg-gray-200 self-start"
@@ -89,6 +110,11 @@ export default function ChatPage() {
                   {message.text}
                 </div>
               ))}
+              {loading && (
+                <div className="flex justify-center items-center mt-4">
+                  <div className="loader border-t-4 border-blue-500 border-solid rounded-full w-8 h-8 animate-spin"></div>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 flex items-center space-x-2">
@@ -96,14 +122,29 @@ export default function ChatPage() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={currentQuestion ? "Answer..." : "Waiting for bot..."}
+                placeholder={
+                  currentQuestion ? "Answer..." : "Waiting for bot..."
+                }
                 className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
               />
               <button
                 onClick={sendMessage}
-                className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition"
+                className={`bg-gray-950 text-white p-3 rounded-lg hover:bg-blue-700 transition ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={loading}
               >
                 Send
+              </button>
+              <button
+                onClick={endChat}
+                className={`bg-red-800 text-white p-3 rounded-lg hover:bg-red-700 transition ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={loading}
+              >
+                End Chat
               </button>
             </div>
           </>

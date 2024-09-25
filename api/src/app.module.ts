@@ -1,16 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { ChatModule } from './chat/chat.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SwaggerModule } from './core/swagger/swagger.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ChatModule } from './chat/chat.module';
+
 @Module({
   imports: [
-    MongooseModule.forRoot(
-      'mongodb+srv://hanlueee:ledun2216@chatbot-app-cluster.vxfrc.mongodb.net/?retryWrites=true&w=majority&appName=chatbot-app-cluster',
-    ),
+    GracefulShutdownModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: (() => {
@@ -20,10 +18,17 @@ import { MongooseModule } from '@nestjs/mongoose';
             ? '.env.production'
             : env === 'staging'
               ? '.env.staging'
-              : '.env.development';
+              : '.env';
         console.log(`Loading environment variables from ${envFilePath}`);
         return envFilePath;
       })(),
+    }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('DATABASE_URL'),
+      }),
     }),
     ThrottlerModule.forRoot([
       {
@@ -34,7 +39,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     SwaggerModule,
     ChatModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

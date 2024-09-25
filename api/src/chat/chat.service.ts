@@ -1,8 +1,13 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Session, SessionDocument } from '../models/sessions.schema';
 import { Question, QuestionDocument } from '../models/question.schema';
+import { StartSessionDto } from './dto/requests/startSession.dto';
 @Injectable()
 export class ChatService implements OnModuleInit {
   constructor(
@@ -14,11 +19,19 @@ export class ChatService implements OnModuleInit {
     await this.seedQuestions(); //seed questions
   }
 
-  async getSession(sessionId: string) {
-    return await this.sessionModel.findById(sessionId);
+  async getSession(sessionId: string): Promise<Session> {
+    try {
+      const result = await this.sessionModel.findById(sessionId);
+      return result;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'An error occurred, please try again later',
+      );
+    }
   }
 
-  async seedQuestions() {
+  async seedQuestions(): Promise<void> {
     const existingQuestions = await this.questionModel.countDocuments();
     if (existingQuestions === 0) {
       const questions = [
@@ -64,20 +77,39 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async startSession(userId: string) {
-    const newSession = new this.sessionModel({ userId, responses: [] });
-    return newSession.save();
+  async startSession(
+    startSessionDto: StartSessionDto,
+  ): Promise<SessionDocument> {
+    try {
+      const newSession = new this.sessionModel({
+        userId: startSessionDto.userId,
+        responses: [],
+      });
+      return await newSession.save();
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'An error occurred, please try again later',
+      );
+    }
   }
 
-  async getQuestion(index: number) {
-    console.log('Getting question for index:', index);
-    const question = await this.questionModel.findOne({ order: index + 1 });
-    if (question) {
-      console.log('Returning question:', question.text);
-      return question.text;
+  async getQuestion(index: number): Promise<string | null> {
+    try {
+      console.log('Getting question for index:', index);
+      const question = await this.questionModel.findOne({ order: index + 1 });
+      if (question) {
+        console.log('Returning question:', question.text);
+        return question.text;
+      }
+      console.log('No more questions, chat ended');
+      return null;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'An error occurred, please try again later',
+      );
     }
-    console.log('No more questions, chat ended');
-    return null;
   }
 
   async addResponse(sessionId: string, questionIndex: number, answer: string) {
@@ -131,23 +163,32 @@ export class ChatService implements OnModuleInit {
         nextQuestion: nextQuestion ? nextQuestion : 'Chat ended',
       };
     } catch (error) {
-      console.error('Error in addResponse:', error);
-      throw new Error(`Failed to add response: ${error.message}`);
+      console.log(error);
+      throw new InternalServerErrorException(
+        'An error occurred, please try again later',
+      );
     }
   }
 
-  async endSession(sessionId: string) {
-    const session = await this.sessionModel.findById(sessionId);
-    if (session.endedAt) {
-      return { message: 'This session is already ended.' };
+  async endSession(sessionId: string): Promise<any> {
+    try {
+      const session = await this.sessionModel.findById(sessionId);
+      if (session.endedAt) {
+        return { message: 'This session is already ended.' };
+      }
+
+      const endedSession = await this.sessionModel.findByIdAndUpdate(
+        sessionId,
+        { endedAt: new Date() },
+        { new: true },
+      );
+
+      return { message: 'Session ended successfully.', session: endedSession };
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'An error occurred, please try again later',
+      );
     }
-
-    const endedSession = await this.sessionModel.findByIdAndUpdate(
-      sessionId,
-      { endedAt: new Date() },
-      { new: true },
-    );
-
-    return { message: 'Session ended successfully.', session: endedSession };
   }
 }

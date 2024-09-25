@@ -3,9 +3,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-
+import { ChatModule } from './chat/chat.module';
+import { SwaggerModule } from './core/swagger/swagger.module';
+import { MongooseModule } from '@nestjs/mongoose';
 @Module({
   imports: [
+    MongooseModule.forRoot(
+      'mongodb+srv://hanlueee:ledun2216@chatbot-app-cluster.vxfrc.mongodb.net/?retryWrites=true&w=majority&appName=chatbot-app-cluster',
+    ),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: (() => {
@@ -26,6 +31,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
         limit: 10,
       },
     ]),
+    SwaggerModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

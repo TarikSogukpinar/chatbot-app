@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import * as hpp from 'hpp';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
+import { SwaggerService } from './core/swagger/swagger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,9 @@ async function bootstrap() {
   app.use(hpp());
   app.use(compression());
   app.use(cookieParser());
+
+  const swaggerService = app.get(SwaggerService);
+  swaggerService.setupSwagger(app);
 
   await app.listen(
     configService.get<number>('API_PORT', { infer: true }),

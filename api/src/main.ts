@@ -1,6 +1,6 @@
 //Custom Modules, Packages, Configs, etc.
 import { NestFactory } from '@nestjs/core';
-import { Logger, VersioningType } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerService } from './core/swagger/swagger.service';
@@ -11,11 +11,12 @@ import * as hpp from 'hpp';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
 import { setupGracefulShutdown } from 'nestjs-graceful-shutdown';
+import validationOptions from './utils/validate-options';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   setupGracefulShutdown({ app });
-  
+
   const configService = app.get(ConfigService);
 
   app.setGlobalPrefix(
@@ -35,6 +36,8 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
+
+  app.useGlobalPipes(new ValidationPipe(validationOptions));
 
   const swaggerService = app.get(SwaggerService);
   swaggerService.setupSwagger(app);

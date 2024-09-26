@@ -3,42 +3,43 @@
 import { useState, useEffect } from "react";
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState([]); // Mesajları tutar
-  const [inputValue, setInputValue] = useState(""); // Input alanının değerini tutar
-  const [currentQuestion, setCurrentQuestion] = useState(""); // Şu anki soruyu tutar
-  const [sessionId, setSessionId] = useState(null); // Session ID'sini tutar
-  const [chatStarted, setChatStarted] = useState(false); // Chat'in başlayıp başlamadığını tutar
-  const [loading, setLoading] = useState(false); // Yüklenme durumunu kontrol eder
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState("");
+  const [currentQuestion, setCurrentQuestion] = useState("");
+  const [sessionId, setSessionId] = useState(null);
+  const [chatStarted, setChatStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Yeni chat oturumu başlat
   const startChat = async () => {
-    setLoading(true); // Spinner'ı başlat
-    const response = await fetch("http://localhost:6060/api/v1/chat/start", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId: "123456" }), // Varsayılan bir userId
-    });
+    setLoading(true);
+    const response = await fetch(
+      "http://localhost:6060/api/v1/chat/startChatSession",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: "123456" }), // Default user Id
+      }
+    );
     const data = await response.json();
-    setSessionId(data.sessionId); // Session ID'yi ayarla
-    setCurrentQuestion(data.question); // İlk soruyu ayarla
-    setMessages([{ text: data.question, from: "bot" }]); // Mesajları başlat
-    setChatStarted(true); // Chat'in başladığını işaretle
-    setLoading(false); // Spinner'ı durdur
+    setSessionId(data.sessionId);
+    setCurrentQuestion(data.question);
+    setMessages([{ text: data.question, from: "bot" }]);
+    setChatStarted(true);
+    setLoading(false);
   };
 
-  // Kullanıcıdan gelen cevap ve bir sonraki sorunun alınması
   const sendMessage = async () => {
     if (!inputValue.trim()) return;
-    setLoading(true); // Spinner'ı başlat
+    setLoading(true);
 
     const updatedMessages = [...messages, { text: inputValue, from: "user" }];
     setMessages(updatedMessages);
     setInputValue("");
 
     const response = await fetch(
-      `http://localhost:6060/api/v1/chat/${sessionId}/question/${messages.length}`,
+      `http://localhost:6060/api/v1/chat/${sessionId}/answerChatQuestion/${messages.length}`,
       {
         method: "POST",
         headers: {
@@ -49,7 +50,7 @@ export default function ChatPage() {
     );
 
     const data = await response.json();
-    setLoading(false); // Spinner'ı durdur
+    setLoading(false);
 
     if (data.nextQuestion) {
       setCurrentQuestion(data.nextQuestion);
@@ -67,7 +68,7 @@ export default function ChatPage() {
 
     setLoading(true);
     const response = await fetch(
-      `http://localhost:6060/api/v1/chat/end/${sessionId}`,
+      `http://localhost:6060/api/v1/chat/endChatSession/${sessionId}`,
       {
         method: "POST",
       }
@@ -96,7 +97,6 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-            {/* Eğer chat başladıysa mesajları ve input alanını göster */}
             <div className="flex flex-col space-y-3 h-96 overflow-y-scroll p-4 border border-gray-200 rounded-lg bg-gray-50">
               {messages.map((message, index) => (
                 <div

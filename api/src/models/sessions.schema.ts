@@ -5,7 +5,7 @@ export type SessionDocument = Session & Document;
 
 @Schema()
 export class Session {
-  _id: string; // Add this line to declare the _id property
+  _id: string;
 
   @Prop({ required: true })
   userId: string;

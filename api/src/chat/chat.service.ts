@@ -7,9 +7,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Session, SessionDocument } from '../models/sessions.schema';
 import { Question, QuestionDocument } from '../models/question.schema';
-import { StartSessionDto } from './dto/requests/startSession.dto';
-import { AddResponseResponseDto } from './dto/responses/addResponseResponse.dto';
-import { EndSessionResponseDto } from './dto/responses/endSessionResponse.dto';
+import { AddResponseResponseDto } from './dto/addResponseResponse.dto';
+import { EndSessionResponseDto } from './dto/endSessionResponse.dto';
+import {
+  InvalidInputParameters,
+  InvalidQuestionIndexException,
+  SessionAlreadyEndedException,
+  SessionHasEndedException,
+  SessionNotFoundException,
+} from 'src/core/handler/exceptions/custom-exceptions';
 @Injectable()
 export class ChatService implements OnModuleInit {
   constructor(
@@ -21,7 +27,7 @@ export class ChatService implements OnModuleInit {
     await this.seedQuestions(); //seed questions
   }
 
-  async getSession(sessionId: string): Promise<Session> {
+  async getChatSession(sessionId: string): Promise<Session> {
     try {
       const result = await this.sessionModel.findById(sessionId);
       return result;
@@ -73,18 +79,13 @@ export class ChatService implements OnModuleInit {
         },
       ];
       await this.questionModel.insertMany(questions);
-      console.log('Questions seeded successfully');
-    } else {
-      console.log('Questions already exist in the database');
     }
   }
 
-  async startSession(
-    startSessionDto: StartSessionDto,
-  ): Promise<SessionDocument> {
+  async startChatSession(userId: string): Promise<SessionDocument> {
     try {
       const newSession = new this.sessionModel({
-        userId: startSessionDto.userId,
+        userId: userId,
         responses: [],
       });
       return await newSession.save();
@@ -96,15 +97,12 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async getQuestion(index: number): Promise<any> {
+  async getChatQuestion(index: number): Promise<string> {
     try {
-      console.log('Getting question for index:', index);
       const question = await this.questionModel.findOne({ order: index + 1 });
       if (question) {
-        console.log('Returning question:', question.text);
         return question.text;
       }
-      console.log('No more questions, chat ended');
 
       return null;
     } catch (error) {
@@ -121,47 +119,31 @@ export class ChatService implements OnModuleInit {
     answer: string,
   ): Promise<AddResponseResponseDto> {
     try {
-      // Input validation
-      if (!sessionId || questionIndex === undefined || answer === undefined) {
-        throw new Error('Invalid input parameters');
-      }
+      if (!sessionId || questionIndex === undefined || answer === undefined)
+        throw new InvalidInputParameters();
 
-      // Fetch the session
       const session = await this.sessionModel.findById(sessionId);
-      if (!session) {
-        throw new Error('Session not found');
-      }
 
-      // Check if the session has ended
-      if (session.endedAt) {
-        console.log('Session has ended, no more responses allowed');
-      }
+      if (!session) throw new SessionNotFoundException();
 
-      // Convert questionIndex to a number and fetch the question
+      if (session.endedAt) throw new SessionHasEndedException();
+
       const index = parseInt(questionIndex.toString(), 10);
       const question = await this.questionModel.findOne({ order: index + 1 });
 
-      // Check if the question exists
-      if (!question) {
-        throw new Error('Invalid question index');
-      }
+      if (!question) throw new InvalidQuestionIndexException();
 
-      // Prepare the new response
       const newResponse = { question: question.text, answer };
 
-      // Update the session with the new response
       const updatedSession = await this.sessionModel.findByIdAndUpdate(
         sessionId,
         {
-          $push: { responses: newResponse }, // Use $push to add to the array
+          $push: { responses: newResponse },
         },
         { new: true, runValidators: true },
       );
 
-      console.log('Updated Session:', updatedSession);
-
-      // Fetch the next question
-      const nextQuestion = await this.getQuestion(index + 1);
+      const nextQuestion = await this.getChatQuestion(index + 1);
 
       return {
         updatedSession,
@@ -175,14 +157,11 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async endSession(sessionId: string): Promise<EndSessionResponseDto> {
+  async endChatSession(sessionId: string): Promise<EndSessionResponseDto> {
     try {
       const session = await this.sessionModel.findById(sessionId);
       if (session.endedAt) {
-        return {
-          sessionId,
-          message: 'This session is already ended.',
-        };
+        throw new SessionAlreadyEndedException();
       }
 
       const endedSession = await this.sessionModel.findByIdAndUpdate(

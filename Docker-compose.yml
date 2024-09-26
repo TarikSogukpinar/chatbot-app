@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  chat-api:
+    image: ledun/chat-api:latest # Docker Hub'dan çekeceğiniz imaj
+    ports:
+      - "7071:7071"
+    environment:
+      - NODE_ENV=development
+
+  chat-web:
+    image: ledun/chat-web:latest # Docker Hub'dan çekeceğiniz imaj
+    ports:
+      - "3025:3025"
+    environment:
+      - NODE_ENV=development

@@ -19,10 +19,8 @@ RUN pnpm run build
 
 RUN ls -la dist
 
-RUN pnpm exec prisma generate
-
 ENV NODE_ENV=development
 
 EXPOSE 7071
 
-CMD ["node", "dist/src/main.js"]
+CMD ["node", "dist/main.js"]

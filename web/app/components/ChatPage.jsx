@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { sendMessageToChat, startChatSession } from "../utils/chatApi";
+import { useState } from "react";
+import {
+  endChatSession,
+  sendMessageToChat,
+  startChatSession,
+} from "../utils/chatApi";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { sendMessageToChat, startChatSession } from "../utils/chatApi";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
@@ -11,73 +12,62 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
 
   const startChat = async () => {
-    setLoading(true);
-    const response = await fetch(
-      "http://localhost:6060/api/v1/chat/startChatSession",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId: "123456" }), // Default user Id
-      }
-    );
-    const data = await response.json();
-    setSessionId(data.sessionId);
-    setCurrentQuestion(data.question);
-    setMessages([{ text: data.question, from: "bot" }]);
-    setChatStarted(true);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const data = await startChatSession("123456");
+      setSessionId(data.sessionId);
+      setCurrentQuestion(data.question);
+      setMessages([{ text: data.question, from: "bot" }]);
+      setChatStarted(true);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const sendMessage = async () => {
     if (!inputValue.trim()) return;
-    setLoading(true);
+    try {
+      setLoading(true);
+      const updatedMessages = [...messages, { text: inputValue, from: "user" }];
+      setMessages(updatedMessages);
+      setInputValue("");
 
-    const updatedMessages = [...messages, { text: inputValue, from: "user" }];
-    setMessages(updatedMessages);
-    setInputValue("");
-
-    const response = await fetch(
-      `http://localhost:6060/api/v1/chat/${sessionId}/answerChatQuestion/${messages.length}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ answer: inputValue }),
+      const data = await sendMessageToChat(
+        sessionId,
+        messages.length,
+        inputValue
+      );
+      if (data.nextQuestion) {
+        setCurrentQuestion(data.nextQuestion);
+        setMessages([
+          ...updatedMessages,
+          { text: data.nextQuestion, from: "bot" },
+        ]);
+      } else {
+        setMessages([...updatedMessages, { text: "Chat ended", from: "bot" }]);
       }
-    );
-
-    const data = await response.json();
-    setLoading(false);
-
-    if (data.nextQuestion) {
-      setCurrentQuestion(data.nextQuestion);
-      setMessages([
-        ...updatedMessages,
-        { text: data.nextQuestion, from: "bot" },
-      ]);
-    } else {
-      setMessages([...updatedMessages, { text: "Chat ended", from: "bot" }]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const endChat = async () => {
     if (!sessionId) return;
-
-    setLoading(true);
-    const response = await fetch(
-      `http://localhost:6060/api/v1/chat/endChatSession/${sessionId}`,
-      {
-        method: "POST",
-      }
-    );
-    await response.json();
-    setMessages([{ text: "Chat ended", from: "bot" }]);
-    setChatStarted(false);
-    setSessionId(null);
-    setLoading(false);
+    try {
+      setLoading(true);
+      await endChatSession(sessionId);
+      setMessages([{ text: "Chat ended", from: "bot" }]);
+      setChatStarted(false);
+      setSessionId(null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
